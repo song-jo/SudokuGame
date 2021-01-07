@@ -3,6 +3,7 @@ import copy
 import linecache
 import random
 
+#Settings
 pygame.font.init()
 FONT = pygame.font.SysFont("courier new", 25)
 FONT_BOLD = pygame.font.SysFont("consolas", 25, bold = True)
@@ -23,6 +24,7 @@ initial = [[0, 0, 0, 0, 0, 0, 0, 0, 0],
 		 [0, 0, 0, 0, 0, 0, 0, 0, 0]]
 
 def main():
+	#Initializing Game board
 	logo = pygame.image.load("sulogo.png")
 	pygame.display.set_icon(logo)
 	pygame.display.set_caption("Sudoku")
@@ -37,30 +39,36 @@ def main():
 	running = True
 	clicked = False
 	solved = False
+	#Game logic
 	while running:
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				running = False
-			
+			#Behavior when mouse clicks on tile
 			if event.type == pygame.MOUSEBUTTONDOWN :
 				pos = pygame.mouse.get_pos()
 				tile = (pos[1]*9//WINDOW_HEIGHT, pos[0]*9//WINDOW_WIDTH)
 				tilepos = ((pos[0]//SQUARE_WIDTH)*SQUARE_WIDTH+(SQUARE_WIDTH/2.5), (pos[1]//SQUARE_HEIGHT)*SQUARE_HEIGHT+SQUARE_HEIGHT/4.5)
 				clicked = True
+			#Key press to Solve game
 			elif event.type == pygame.KEYDOWN and event.key == pygame.K_s and not solved:
 				clicked = False
 				solve(initial, screen, 30)
 				solved = True
 				print("You win! press N for a new puzzle")
-				
+			#Key press to generate new game
 			elif event.type == pygame.KEYDOWN and event.key == pygame.K_n:
-				new_game(screen, initial, game, clues_and_guesses)
+				screen.fill((255, 255, 255))
+				draw_grid_lines(screen)
+				clues_and_guesses = get_puzzle(initial)
+				game = copy.deepcopy(initial)
+				fill_board(initial, screen)
+				pygame.display.update()
 				clicked = False
 				solved = False
 				pygame.display.update()
-				
+			#Action once tile is clicked
 			elif clicked and event.type == pygame.KEYDOWN:
-				#highlight position tile
 				ukey = 0
 				if event.key == pygame.K_1 or event.key == pygame.K_KP1:
 					ukey = 1;
@@ -80,12 +88,12 @@ def main():
 					ukey = 8;
 				elif event.key == pygame.K_9 or event.key == pygame.K_KP9:
 					ukey = 9;
+				#Behavior if entered key is a digit 
 				if ukey in list(range(0,10)):
-					#behavior if entered key is a digit 
-					
+					#tile is a clue tile
 					if initial[tile[0]][tile[1]]!=0:
-						#tile is a clue tile
 						pass
+					#Erase non clue tile
 					elif (event.key == pygame.K_0 or event.key == pygame.K_KP0 or event.key == pygame.K_BACKSPACE):
 						#entered key is 0 or backspace
 						text = FONT.render("0", 1, (0,0,0)) 
@@ -94,10 +102,9 @@ def main():
 						game[tile[0]][tile[1]] = 0
 						pygame.display.update(textpos)
 						clues_and_guesses -= 1
-						
-						
+					#tile is occupied by a guess	
 					elif game[tile[0]][tile[1]]!=0 and (game[tile[0]][tile[1]] != ukey):
-						#tile occupied by guess
+						#Guess is not valid according to the rules of Sudoku
 						if (not is_valid(game, ukey, tile[0], tile[1])):
 							print("INVALID GUESS")
 						else:
@@ -108,9 +115,9 @@ def main():
 							game[tile[0]][tile[1]] = ukey
 							pygame.display.update(textpos)
 							clues_and_guesses += 1
-							
+					#tile to be filled is not occupied	
 					else:
-						#new tile to be filled
+						#Guess is not valid according to the rules of Sudoku
 						if (not is_valid(game, ukey, tile[0], tile[1])):
 							print("INVALID GUESS")
 						else:
@@ -119,23 +126,28 @@ def main():
 							game[tile[0]][tile[1]] = ukey
 							pygame.display.update(text.get_rect(topleft = tilepos))
 							clues_and_guesses += 1
-							
+					#Whole board is filled and valid	
 					if clues_and_guesses == 81:
 						print("You win! press N for a new puzzle")
 				
 				
 						
-				
 
-def new_game(screen, initial, game, clues_and_guesses):
-	#updates initial game parameters to create new game
-	screen.fill((255, 255, 255))
-	draw_grid_lines(screen)
-	clues_and_guesses = get_puzzle(initial)
-	game = copy.deepcopy(initial)
-	fill_board(initial, screen)
-	
-					
+#PUZZLE RETRIEVAL
+def get_puzzle(game):
+	"""generate a new puzzle from the csv file containing 1 million puzzle,
+	returns number of clues"""
+	filename = "sudoku.csv"
+	line = linecache.getline(filename, random.randint(2,1000001))
+	clues = 0
+	for i in range(81):
+		if int(line[i]) != 0:
+			clues += 1
+		game[i//9][i%9] = int(line[i])
+	return clues				
+
+#BOARD CREATION
+				
 def draw_grid_lines(screen):
 	#draw the grid lines for the game
 	for i in range(1,9):
@@ -156,34 +168,19 @@ def fill_board(board, screen):
 				screen.blit(text,tilepos)
 
 
-#PUZZLE RETRIEVALS
-def get_puzzle(game):
-	#generate a new puzzle from the csv file containing 1 million puzzle
-	#returns number of clues
-	filename = "sudoku.csv"
-	line = linecache.getline(filename, random.randint(2,1000001))
-	clues = 0
-	for i in range(81):
-		if int(line[i]) != 0:
-			clues += 1
-		game[i//9][i%9] = int(line[i])
-	return clues
-
-
 #SOLVER LOGIC
 def is_valid(board, val, row, col):
 	#checks if value is valid for currently unoccupied tile
 	for i in range(0,9):
+		#look for the same value in the same row
 		if (board[row][i] == val):
-			#look for similar value in same row
 			return False 
+		#look for the same value in the same column
 		elif(board[i][col] == val):
-			#look for similar value in same column
 			return False
+	#look for similar value in the same 3x3 square
 	for i in range(3):
-		#look for similar value in same 3x3 square
 		for j in range(3):
-
 			i_target = i+3*(row//3)
 			j_target = j+3*(col//3)
 			if(board[i_target][j_target] == val):
@@ -191,8 +188,10 @@ def is_valid(board, val, row, col):
 	return True
 
 def solve(board, screen, wait):
+	#Solves a Sudoku puzzle recursively using backtracking
 	for row in range(9):
 		for col in range(9):
+			#look for the first empty tile and try all possible values
 			if(board[row][col] ==0):
 				for n in range(1,10):
 					if (is_valid(board, n, row, col)):
@@ -204,14 +203,16 @@ def solve(board, screen, wait):
 						board[row][col] = n
 						pygame.display.update(text.get_rect(topleft = tilepos))
 						pygame.time.wait(wait)
+						#recursively call solve() on the next available tile
 						if (solve(board, screen, wait)):
 							return True
+						#erase current tile to restart try all possible values again
 						else:
 							screen.fill((255,255,255),textpos)
 							board[row][col] = 0
 							pygame.display.update(text.get_rect(topleft = tilepos))
 							pygame.time.wait(wait)
-						
+				#No valid values for current tile	
 				return False
 	return True
 	
