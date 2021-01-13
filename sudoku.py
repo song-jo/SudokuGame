@@ -7,10 +7,10 @@ import random
 pygame.font.init()
 FONT = pygame.font.SysFont("courier new", 25)
 FONT_BOLD = pygame.font.SysFont("consolas", 25, bold = True)
-WINDOW_HEIGHT = 360
-WINDOW_WIDTH = 360
-SQUARE_HEIGHT = WINDOW_HEIGHT//9
-SQUARE_WIDTH = WINDOW_WIDTH//9
+WINDOW_HEIGHT = 480
+WINDOW_WIDTH = 480
+SQUARE_HEIGHT = WINDOW_HEIGHT/9
+SQUARE_WIDTH = WINDOW_WIDTH/9
 
 
 initial = [[0, 0, 0, 0, 0, 0, 0, 0, 0], 
@@ -31,10 +31,15 @@ def main():
 	screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
 	screen.fill((255, 255, 255))
 	draw_grid_lines(screen)
+	#retrieve a puzzle
 	clues_and_guesses = get_puzzle(initial)
 	game = copy.deepcopy(initial)
 	fill_board(initial, screen)
 	pygame.display.update()
+	#Tile variables
+	tileposition = None
+	tile = None
+	tilecenter = None
 	#Logic Flags
 	running = True
 	clicked = False
@@ -46,10 +51,28 @@ def main():
 				running = False
 			#Behavior when mouse clicks on tile
 			if event.type == pygame.MOUSEBUTTONDOWN :
+				tilesurface = pygame.Surface((SQUARE_WIDTH-3,SQUARE_HEIGHT-3),pygame.SRCALPHA)
+				#removes existing highlight if it exists
+				if clicked:
+					tilesurface.fill((255,255,255))
+					screen.blit(tilesurface,tileposition)
+					#replaces original digit back after removing highlight
+					if game[tile[0]][tile[1]]!=0:
+						if initial[tile[0]][tile[1]] != 0:
+							text = FONT_BOLD.render(str(game[tile[0]][tile[1]]), 1, (0,0,0)) 
+						else:
+							text = FONT.render(str(game[tile[0]][tile[1]]), 1, (0,0,0)) 
+						screen.blit(text,tilecenter)
+				#get current mouse position
 				pos = pygame.mouse.get_pos()
-				tile = (pos[1]*9//WINDOW_HEIGHT, pos[0]*9//WINDOW_WIDTH)
-				tilepos = ((pos[0]//SQUARE_WIDTH)*SQUARE_WIDTH+(SQUARE_WIDTH/2.5), (pos[1]//SQUARE_HEIGHT)*SQUARE_HEIGHT+SQUARE_HEIGHT/4.5)
+				tile = (pos[1]*9//WINDOW_HEIGHT, pos[0]*9//WINDOW_WIDTH) #tile (n,m) 
+				tilecenter = ((pos[0]//SQUARE_WIDTH)*SQUARE_WIDTH+(SQUARE_WIDTH/2.5), (pos[1]//SQUARE_HEIGHT)*SQUARE_HEIGHT+SQUARE_HEIGHT/4.5)#for drawing digits
+				tileposition = ((pos[0]//SQUARE_WIDTH)*SQUARE_WIDTH+3,(pos[1]//SQUARE_HEIGHT)*SQUARE_HEIGHT+3)#for drawing tiles
+				#add highlight to selected tile
+				tilesurface.fill((255,255,0,100))
+				screen.blit(tilesurface,((pos[0]//SQUARE_WIDTH)*SQUARE_WIDTH+3,(pos[1]//SQUARE_HEIGHT)*SQUARE_HEIGHT+3))
 				clicked = True
+				pygame.display.update()
 			#Key press to Solve game
 			elif event.type == pygame.KEYDOWN and event.key == pygame.K_s and not solved:
 				clicked = False
@@ -96,35 +119,43 @@ def main():
 					#Erase non clue tile
 					elif (event.key == pygame.K_0 or event.key == pygame.K_KP0 or event.key == pygame.K_BACKSPACE):
 						#entered key is 0 or backspace
-						text = FONT.render("0", 1, (0,0,0)) 
-						textpos = text.get_rect(topleft = tilepos)
-						screen.fill((255,255,255),textpos)
+						text = FONT.render("0", 1, (0,0,0))
+						textpos = text.get_rect(topleft = tilecenter)
+						textsurface = pygame.Surface((textpos.width,textpos.height),pygame.SRCALPHA)
+						textsurface.fill((255,255,255))
+						screen.blit(textsurface,textpos)
+						textsurface.fill((255,255,0,100))
+						screen.blit(textsurface,textpos)
 						game[tile[0]][tile[1]] = 0
 						pygame.display.update(textpos)
 						clues_and_guesses -= 1
 					#tile is occupied by a guess	
 					elif game[tile[0]][tile[1]]!=0 and (game[tile[0]][tile[1]] != ukey):
-						#Guess is not valid according to the rules of Sudoku
+						#Guess is not valid according to the rules of Sudoku(placeholder)
 						if (not is_valid(game, ukey, tile[0], tile[1])):
-							print("INVALID GUESS")
+							pass
 						else:
 							text = FONT.render(str(ukey), 1, (0,0,0))
-							textpos = text.get_rect(topleft = tilepos)
-							screen.fill((255,255,255),textpos)
-							screen.blit(text, tilepos)
+							textpos = text.get_rect(topleft = tilecenter)
+							textsurface = pygame.Surface((textpos.width,textpos.height),pygame.SRCALPHA)
+							textsurface.fill((255,255,255))
+							screen.blit(textsurface,textpos)
+							textsurface.fill((255,255,0,100))
+							screen.blit(textsurface,textpos)
+							screen.blit(text,tilecenter)
 							game[tile[0]][tile[1]] = ukey
 							pygame.display.update(textpos)
 							clues_and_guesses += 1
 					#tile to be filled is not occupied	
 					else:
-						#Guess is not valid according to the rules of Sudoku
+						#Guess is not valid according to the rules of Sudoku(placeholder)
 						if (not is_valid(game, ukey, tile[0], tile[1])):
-							print("INVALID GUESS")
+							pass 
 						else:
 							text = FONT.render(str(ukey), 1, (0,0,0))
-							screen.blit(text, tilepos)
+							screen.blit(text, tilecenter)
 							game[tile[0]][tile[1]] = ukey
-							pygame.display.update(text.get_rect(topleft = tilepos))
+							pygame.display.update(text.get_rect(topleft = tilecenter))
 							clues_and_guesses += 1
 					#Whole board is filled and valid	
 					if clues_and_guesses == 81:
@@ -146,17 +177,16 @@ def get_puzzle(game):
 		game[i//9][i%9] = int(line[i])
 	return clues				
 
-#BOARD CREATION
-				
+#BOARD CREATION	
 def draw_grid_lines(screen):
 	#draw the grid lines for the game
 	for i in range(1,9):
 		if (i %3 ==0):
-			pygame.draw.line(screen, (0,0,0), (i*(WINDOW_WIDTH/9),0), (i*(WINDOW_WIDTH/9), WINDOW_HEIGHT), 3)
-			pygame.draw.line(screen, (0,0,0), (0, i*(WINDOW_HEIGHT/9)), (WINDOW_WIDTH, i*(WINDOW_HEIGHT/9)), 3)
+			pygame.draw.line(screen, (0,0,0), (i*(SQUARE_WIDTH),0), (i*(SQUARE_WIDTH), WINDOW_HEIGHT), 3)
+			pygame.draw.line(screen, (0,0,0), (0, i*(SQUARE_HEIGHT)), (WINDOW_WIDTH, i*(SQUARE_HEIGHT)), 3)
 		else:
-			pygame.draw.line(screen, (0,0,0), (i*(WINDOW_WIDTH/9),0), (i*(WINDOW_WIDTH/9), WINDOW_HEIGHT))
-			pygame.draw.line(screen, (0,0,0), (0, i*(WINDOW_HEIGHT/9)), (WINDOW_WIDTH, i*(WINDOW_HEIGHT/9)))
+			pygame.draw.line(screen, (0,0,0), (i*(SQUARE_WIDTH),0), (i*(SQUARE_WIDTH), WINDOW_HEIGHT),1)
+			pygame.draw.line(screen, (0,0,0), (0, i*(SQUARE_HEIGHT)), (WINDOW_WIDTH, i*(SQUARE_HEIGHT)),1)
 
 def fill_board(board, screen):
 	#Fills board with "initial" puzzle
@@ -164,8 +194,8 @@ def fill_board(board, screen):
 		for col in range(9):
 			if board[row][col]!=0:
 				text = FONT_BOLD.render(str(board[row][col]), 1, (0,0,0))
-				tilepos = (col*SQUARE_WIDTH+(SQUARE_WIDTH/2.5), (row*SQUARE_HEIGHT+SQUARE_HEIGHT/4))
-				screen.blit(text,tilepos)
+				tilecenter = (col*SQUARE_WIDTH+(SQUARE_WIDTH/2.5), (row*SQUARE_HEIGHT+SQUARE_HEIGHT/4.5))
+				screen.blit(text,tilecenter)
 
 
 #SOLVER LOGIC
@@ -196,12 +226,12 @@ def solve(board, screen, wait):
 				for n in range(1,10):
 					if (is_valid(board, n, row, col)):
 						text = FONT.render(str(n), 1, (0,0,0))
-						tilepos = (col*SQUARE_WIDTH+(SQUARE_WIDTH/2.5), (row*SQUARE_HEIGHT+SQUARE_HEIGHT/4))
-						textpos = text.get_rect(topleft = tilepos)
+						tilecenter = (col*SQUARE_WIDTH+(SQUARE_WIDTH/2.5), (row*SQUARE_HEIGHT+SQUARE_HEIGHT/4))
+						textpos = text.get_rect(topleft = tilecenter)
 						screen.fill((255,255,255),textpos)
-						screen.blit(text, tilepos)
+						screen.blit(text, tilecenter)
 						board[row][col] = n
-						pygame.display.update(text.get_rect(topleft = tilepos))
+						pygame.display.update(text.get_rect(topleft = tilecenter))
 						pygame.time.wait(wait)
 						#recursively call solve() on the next available tile
 						if (solve(board, screen, wait)):
@@ -210,7 +240,7 @@ def solve(board, screen, wait):
 						else:
 							screen.fill((255,255,255),textpos)
 							board[row][col] = 0
-							pygame.display.update(text.get_rect(topleft = tilepos))
+							pygame.display.update(text.get_rect(topleft = tilecenter))
 							pygame.time.wait(wait)
 				#No valid values for current tile	
 				return False
