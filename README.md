@@ -6,6 +6,6 @@ Sudoku is played on a 9x9 grid divided into nine 3x3 squares. The goal of the ga
   1. Run sudoku.py to start the game window.
   2. Mouse click on any tile to select it.
   3. Enter a value for the selected tile.
-  4. Press S to solve the Sudoku automatically.
+  4. Press S to solve the sudoku and see the backtracking algorithm visualized.
   5. Press N to generate a new puzzle.
 
